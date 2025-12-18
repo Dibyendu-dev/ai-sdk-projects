@@ -5,14 +5,14 @@ import { DefaultChatTransport } from "ai";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
-export default function Page() {
+export default function MultiModalChatPage() {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { messages, sendMessage, status, error, stop } = useChat({
     transport: new DefaultChatTransport({
-      api: "api/multi-modal-chat",
+      api: "/api/multi-modal-chat",
     }),
   });
 
@@ -28,10 +28,12 @@ export default function Page() {
 
   return (
     <div className="flex flex-col w-full max-w-md pt-12 pb-36 mx-auto stretch">
+
       {error && <div className="text-red-500 mb-4">{error.message}</div>}
+
       {messages.map((message) => (
         <div key={message.id}>
-          <div>{message.role === "user" ? "you:" : "AI:"}</div>
+          <div className=" font-semibold">{message.role === "user" ? "you:" : "AI:"}</div>
           {message.parts.map((part, index) => {
             switch (part.type) {
               case "text":
