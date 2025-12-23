@@ -14,3 +14,5 @@ export async function POST(req:Request) {
     return new Response("Failed to stream chat completion", { status: 500 });
     }
 }
+
+// remove the background of the image, add a background in the london street, in daylight 

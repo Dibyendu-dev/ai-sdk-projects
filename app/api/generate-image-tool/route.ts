@@ -1,24 +1,25 @@
-import { openai } from "@ai-sdk/openai";
 import {
-  convertToModelMessages,
-  experimental_generateImage as generateImage,
-  InferUITools,
-  stepCountIs,
+  UIMessage,
+  UIDataTypes,
   streamText,
   tool,
-  UIDataTypes,
-  UIMessage,
+  convertToModelMessages,
+  stepCountIs,
+  InferUITools,
+  experimental_generateImage as generateImage,
+  NoImageGeneratedError,
 } from "ai";
-import z from "zod";
+import { openai } from "@ai-sdk/openai";
+import { z } from "zod";
 
 const tools = {
   generateImage: tool({
-    description: "Generate an Image",
+    description: "Generate an image",
     inputSchema: z.object({
-      prompt: z.string().describe("The prompt is to generate an image for"),
+      prompt: z.string().describe("The prompt to generate an image for"),
     }),
     execute: async ({ prompt }) => {
-      const { image } = generateImage({
+      const { image } = await generateImage({
         model: openai.imageModel("dall-e-3"),
         prompt,
         size: "1024x1024",
@@ -29,6 +30,7 @@ const tools = {
       return image.base64;
     },
     toModelOutput: () => {
+      // Returning base64 image will exceed the context window of the model. Return a placeholder text instead.
       return {
         type: "content",
         value: [
@@ -48,15 +50,21 @@ export type ChatMessage = UIMessage<never, UIDataTypes, ChatTools>;
 export async function POST(req: Request) {
   try {
     const { messages }: { messages: ChatMessage[] } = await req.json();
-    const result = await streamText({
-        model: openai("gpt-3.5-turbo"),
-        messages: convertToModelMessages(messages),
-        tools,
-        stopWhen: stepCountIs(2)
-    })
-    return result.toUIMessageStreamResponse()
+
+    const result = streamText({
+      model: openai("gpt-5-mini"),
+      messages: convertToModelMessages(messages),
+      tools,
+      stopWhen: stepCountIs(2),
+    });
+
+    return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error("Error streaming chat completion:", error);
+    if (NoImageGeneratedError.isInstance(error)) {
+    console.log('NoImageGeneratedError');
+    console.log('Cause:', error.cause);
+    console.log('Responses:', error.responses);
+  }
     return new Response("Failed to stream chat completion", { status: 500 });
   }
 }
